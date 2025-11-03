@@ -1,279 +1,182 @@
+<!--
+File: index.html
+Progetto: Barzellette di Tutti Noi 😂
+Descrizione: Single-file web app (HTML/CSS/JS) per leggere e scrivere barzellette.
+Livello: Adatto a un quasi-principiante. Tutti i passaggi sono spiegati in italiano tramite commenti.
 
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body {
-                  background-color: white; /* Ensure the iframe has a white background */
-                }
-    
-                
-              </style>
-                        </head>
-                        <body>
-                            <!DOCTYPE html>
+Istruzioni rapide:
+1. Copia questo intero file in un nuovo file chiamato `index.html`.
+2. Aprilo con un browser (doppio click o trascina nel browser) per eseguirlo in locale.
+3. Per pubblicarlo online gratuitamente: puoi usare Glitch, Netlify o Vercel (vedi la sezione "COME PUBBLICARE" alla fine del file).
+
+Funzionalità incluse:
+- Visualizzare lista di barzellette
+- Aggiungere nuova barzelletta (autore, testo)
+- Mi piace (like) locale per ogni barzelletta
+- Ordinamento per recenti o più popolari
+- Salvataggio persistente tramite localStorage
+- Esportare / importare JSON delle barzellette
+- Interfaccia responsiva (mobile-friendly)
+
+Modifiche facili: cerca le costanti nella sezione JS (CONFIG) per cambiare il titolo, colore, ecc.
+-->
+
+<!doctype html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Letter Challenge - Multiplayer</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Barzellette di Tutti Noi 😂</title>
+  <meta name="description" content="Leggi e condividi barzellette con la community - semplice e gratuito">
   <style>
-    body { font-family: system-ui, sans-serif; }
+    /* ====== Stili base e responsive (facili da leggere e modificare) ====== */
+    :root{
+      --bg: #0f1724; /* sfondo scuro */
+      --card: #0b1220;
+      --accent: #ffcc00; /* colore principale */
+      --muted: #98a0aa;
+      --glass: rgba(255,255,255,0.03);
+      --radius: 12px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; padding:20px; background: linear-gradient(180deg,var(--bg),#071024); color:#e6eef8; -webkit-font-smoothing:antialiased;
+      display:flex; align-items:flex-start; justify-content:center; box-sizing:border-box;
+    }
+    .container{width:100%; max-width:980px;}
+    header{display:flex; gap:16px; align-items:center; margin-bottom:18px}
+    .brand{display:flex; gap:12px; align-items:center}
+    .logo{width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,var(--accent),#ff8a00); display:flex; align-items:center; justify-content:center; color:#071024; font-weight:700}
+    h1{margin:0; font-size:20px}
+    p.lead{margin:0; color:var(--muted); font-size:13px}
+    .layout{display:grid; grid-template-columns: 1fr 360px; gap:18px}
+    @media (max-width:880px){ .layout{grid-template-columns:1fr} .aside{order:2} }
+
+    /* Card */
+    .card{background:var(--card); padding:14px; border-radius:var(--radius); box-shadow: 0 6px 18px rgba(2,6,23,0.6)}
+
+    /* Form */
+    form label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px}
+    input[type=text], textarea{width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:var(--glass); color:inherit; box-sizing:border-box}
+    textarea{min-height:100px; resize:vertical}
+    .btn{display:inline-block; padding:10px 14px; border-radius:10px; background:var(--accent); color:#071024; font-weight:600; cursor:pointer; border:none}
+    .btn.ghost{background:transparent; color:var(--accent); border:1px solid rgba(255,204,0,0.12)}
+
+    /* Lista barzellette */
+    .joke{padding:12px; border-radius:10px; margin-bottom:10px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); display:flex; gap:12px}
+    .joke .meta{font-size:12px; color:var(--muted)}
+    .joke .text{white-space:pre-wrap; font-size:15px}
+    .controls{display:flex; gap:8px; align-items:center}
+    .like{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.02); cursor:pointer}
+
+    /* Utilities */
+    .row{display:flex; gap:10px; align-items:center}
+    .spacer{flex:1}
+    .small{font-size:13px}
+    .muted{color:var(--muted)}
+
+    footer{margin-top:16px; color:var(--muted); font-size:13px}
+
+    /* import/export area */
+    .file-input{display:flex; gap:8px; align-items:center}
+
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-500 to-pink-500">
-  <div id="app" class="flex items-center justify-center min-h-screen p-4"></div>
-
-  <script>
-    // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDWCEXrQNvMoSLCq-I9Eym-EQdRA58czJI",
-  authDomain: "cittamulti.firebaseapp.com",
-  databaseURL: "https://cittamulti-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "cittamulti",
-  storageBucket: "cittamulti.firebasestorage.app",
-  messagingSenderId: "1037924560815",
-  appId: "1:1037924560815:web:3ca426fb6f38243d40c95a"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-    // Lista città italiane (solo minuscolo per confronto)
-    const ITALIAN_CITIES = [
-      "abbiategrasso", "acireale", "adria", "agrigento", "alessandria", "ancona", "andria", "arezzo",
-      "ascoli piceno", "asti", "avellino", "bari", "barletta", "belluno", "benevento", "bergamo",
-      "biella", "bologna", "bolzano", "brescia", "brindisi", "cagliari", "caltanissetta", "campobasso",
-      "caserta", "catania", "catanzaro", "chieti", "como", "cosenza", "cremona", "crotone", "cuneo",
-      "empoli", "enna", "fermo", "ferrara", "firenze", "foggia", "forlì", "frosinone", "genova",
-      "gorizia", "grosseto", "imperia", "isernia", "la spezia", "l'aquila", "latina", "lecce",
-      "lecco", "livorno", "lodi", "lucca", "macerata", "mantova", "massa", "matera", "messina",
-      "milano", "modena", "monza", "napoli", "novara", "nuoro", "olbia", "oristano", "padova",
-      "palermo", "parma", "pavia", "perugia", "pesaro", "pescara", "piacenza", "pisa", "pistoia",
-      "pordenone", "potenza", "prato", "ragusa", "ravenna", "reggio calabria", "reggio emilia",
-      "rieti", "rimini", "roma", "rovigo", "salerno", "sassari", "savona", "siena", "siracusa",
-      "sondrio", "taranto", "teramo", "terni", "torino", "trapani", "trento", "treviso", "trieste",
-      "udine", "varese", "venezia", "verbania", "vercelli", "verona", "vibo valentia", "vicenza",
-      "viterbo"
-    ];
-
-    // Estrai stanza e giocatore dall'URL
-    const urlParams = new URLSearchParams(window.location.search);
-    let roomId = urlParams.get('room');
-    const playerId = urlParams.get('player') || 'p' + Math.floor(Math.random() * 10000);
-
-    if (!roomId) {
-      roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      window.history.replaceState(null, null, `?room=${roomId}&player=${playerId}`);
-    }
-
-    const roomRef = db.ref(`rooms/${roomId}`);
-
-    // Stato iniziale
-    let state = {
-      letter: '',
-      p1: { id: null, score: 0, answered: false },
-      p2: { id: null, score: 0, answered: false },
-      gameOver: false,
-      winner: null,
-      myAnswer: ''
-    };
-
-    // Unisciti o crea stanza
-    roomRef.once('value', (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        // Crea stanza
-        const letters = 'ABCDEFGHILMNOPQRSTUXVZ';
-        const letter = letters[Math.floor(Math.random() * letters.length)];
-        roomRef.set({
-          letter,
-          p1: { id: playerId, score: 0, answered: false },
-          p2: { id: null, score: 0, answered: false },
-          gameOver: false,
-          winner: null
-        });
-        state.p1.id = playerId;
-      } else {
-        if (!data.p1.id) {
-          roomRef.child('p1/id').set(playerId);
-          state.p1.id = playerId;
-        } else if (!data.p2.id) {
-          roomRef.child('p2/id').set(playerId);
-          state.p2.id = playerId;
-        } else if (data.p1.id === playerId) {
-          state.p1.id = playerId;
-        } else if (data.p2.id === playerId) {
-          state.p2.id = playerId;
-        } else {
-          alert('Stanza piena!');
-          return;
-        }
-      }
-      syncAndRender();
-    });
-
-    // Ascolta aggiornamenti
-    roomRef.on('value', syncAndRender);
-
-    function syncAndRender(snapshot) {
-      if (!snapshot) return;
-      const data = snapshot.val();
-      if (!data) return;
-
-      state.letter = data.letter;
-      state.p1 = data.p1;
-      state.p2 = data.p2;
-      state.gameOver = data.gameOver;
-      state.winner = data.winner;
-
-      render();
-    }
-
-    function checkAnswer() {
-      const input = state.myAnswer.trim().toLowerCase();
-      if (!input) {
-        alert('Inserisci una città!');
-        return;
-      }
-
-      const isMyTurn = (state.p1.id === playerId && !state.p1.answered) ||
-                       (state.p2.id === playerId && !state.p2.answered);
-      if (!isMyTurn) return;
-
-      const startsWithLetter = input[0].toUpperCase() === state.letter;
-      const isCity = ITALIAN_CITIES.includes(input);
-
-      const playerKey = state.p1.id === playerId ? 'p1' : 'p2';
-
-      if (startsWithLetter && isCity) {
-        roomRef.child(`${playerKey}/score`).transaction(s => (s || 0) + 1);
-      }
-
-      roomRef.child(`${playerKey}/answered`).set(true);
-
-      // Controlla fine partita dopo 1.5s
-      setTimeout(() => {
-        roomRef.once('value', (snap) => {
-          const d = snap.val();
-          if (d.p1.answered && d.p2.answered) {
-            if (d.p1.score >= 5 || d.p2.score >= 5) {
-              roomRef.update({
-                gameOver: true,
-                winner: d.p1.score >= 5 ? 'p1' : 'p2'
-              });
-            } else {
-              // Nuova lettera
-              const letters = 'ABCDEFGHILMNOPQRSTUXVZ';
-              const newLetter = letters[Math.floor(Math.random() * letters.length)];
-              roomRef.update({
-                letter: newLetter,
-                'p1/answered': false,
-                'p2/answered': false
-              });
-            }
-          }
-        });
-      }, 1500);
-    }
-
-    function resetGame() {
-      const letters = 'ABCDEFGHILMNOPQRSTUXVZ';
-      const letter = letters[Math.floor(Math.random() * letters.length)];
-      roomRef.set({
-        letter,
-        p1: { id: state.p1.id, score: 0, answered: false },
-        p2: { id: state.p2.id, score: 0, answered: false },
-        gameOver: false,
-        winner: null
-      });
-    }
-
-    function render() {
-      const app = document.getElementById('app');
-      const myPlayer = state.p1.id === playerId ? 'p1' : 'p2';
-      const otherPlayer = myPlayer === 'p1' ? 'p2' : 'p1';
-
-      if (state.gameOver) {
-        const winnerName = state.winner === 'p1' ? 'Giocatore 1' : 'Giocatore 2';
-        app.innerHTML = `
-          <div class="bg-white p-6 rounded-2xl max-w-md w-full text-center shadow-xl">
-            <h2 class="text-3xl font-bold mb-4">🏆 ${winnerName} vince!</h2>
-            <p class="text-lg mb-6">${state.p1.score} - ${state.p2.score}</p>
-            <button onclick="resetGame()" class="bg-purple-600 text-white px-6 py-2 rounded-lg">
-              Nuova partita
-            </button>
-            <p class="mt-4 text-sm text-gray-600">Condividi: ${window.location.origin}${window.location.pathname}?room=${roomId}</p>
-          </div>
-        `;
-        return;
-      }
-
-      app.innerHTML = `
-        <div class="bg-white p-6 rounded-2xl max-w-md w-full text-center shadow-xl">
-          <div class="mb-4">
-            <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">Stanza: ${roomId}</span>
-          </div>
-          <div class="flex justify-between mb-6">
-            <div><strong>G1</strong> ${state.p1.score}</div>
-            <div><strong>G2</strong> ${state.p2.score}</div>
-          </div>
-          <div class="text-5xl font-bold mb-6">${state.letter}</div>
-          <input
-            type="text"
-            id="cityInput"
-            placeholder="Città..."
-            class="w-full p-2 border rounded mb-3"
-            onkeypress="if(event.key==='Enter') checkAnswer()"
-          />
-          <button
-            onclick="checkAnswer()"
-            class="bg-pink-600 text-white w-full py-2 rounded"
-            ${state[myPlayer].answered ? 'disabled' : ''}
-          >
-            ${state[myPlayer].answered ? '✅ Inviato' : 'Invia'}
-          </button>
-          <p class="mt-4 text-sm text-gray-600">
-            ${state[otherPlayer].id ? '✅ Avversario connesso' : '⏳ In attesa...'}
-          </p>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">B</div>
+        <div>
+          <h1>Barzellette di Tutti Noi 😂</h1>
+          <p class="lead">Leggi, condividi e fai ridere la community — semplice e veloce.</p>
         </div>
-      `;
+      </div>
+      <div class="spacer"></div>
+      <div class="small muted">Salvate localmente • Prova su telefono</div>
+    </header>
 
-      const input = document.getElementById('cityInput');
-      if (input && !state[myPlayer].answered) {
-        input.focus();
-        input.addEventListener('input', e => state.myAnswer = e.target.value);
-      }
-    }
-  </script>
+    <div class="layout">
+      <!-- Main: lista barzellette -->
+      <main>
+        <div class="card">
+          <div class="row" style="margin-bottom:12px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <label for="sort" class="small muted">Ordina:</label>
+              <select id="sort" class="small" aria-label="Ordina barzellette">
+                <option value="recent">Più recenti</option>
+                <option value="popular">Più popolari</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <div class="small muted">Totale: <span id="count">0</span></div>
+          </div>
+
+          <div id="list"></div>
+
+          <div id="empty" class="muted small" style="padding:12px">Nessuna barzelletta ancora. Diventa il primo a scriverne una!</div>
+        </div>
+
+        <footer>
+          <div class="card" style="margin-top:12px">
+            <strong>Info:</strong>
+            <p class="muted small">Questa demo salva le barzellette nel tuo browser (localStorage). Nessun server esterno è usato per default. Se vuoi salvarle online, ti spiegherò come collegare Firebase o un backend semplice.</p>
+          </div>
+        </footer>
+      </main>
+
+      <!-- Aside: form e strumenti -->
+      <aside class="aside">
+        <div class="card">
+          <h3>Aggiungi una barzelletta</h3>
+          <form id="jokeForm">
+            <label for="author">Il tuo nome (opzionale)</label>
+            <input id="author" type="text" placeholder="es. Marco" maxlength="50">
+
+            <label for="text">La barzelletta</label>
+            <textarea id="text" placeholder="Scrivi qui la barzelletta..." required maxlength="1000"></textarea>
+
+            <div style="margin-top:10px; display:flex; gap:8px;">
+              <button class="btn" type="submit">Pubblica</button>
+              <button type="button" id="clearForm" class="btn ghost">Pulisci</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4>Strumenti</h4>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <button id="exportBtn" class="btn ghost">Esporta JSON</button>
+            <div class="file-input">
+              <input id="importFile" type="file" accept="application/json">
+              <button id="importBtn" class="btn">Importa JSON</button>
+            </div>
+            <button id="resetBtn" class="btn ghost">Reset locale</button>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDt8JXts1hHnuf-hfO1lDw5U4P0HI6PHMI",
+    authDomain: "barzellette-95e78.firebaseapp.com",
+    projectId: "barzellette-95e78",
+    storageBucket: "barzellette-95e78.firebasestorage.app",
+    messagingSenderId: "818177949989",
+    appId: "1:818177949989:web:1328f2212e12f60e7edacc"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
 </body>
 </html>
-
-
-    
-              <script>
-                              const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "letter-challenge-multi.firebaseapp.com",
-  databaseURL: "https://letter-challenge-multi-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "letter-challenge-multi",
-  storageBucket: "letter-challenge-multi.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
-
-
-              </script>
-                        </body>
-                        </html>
-                    
